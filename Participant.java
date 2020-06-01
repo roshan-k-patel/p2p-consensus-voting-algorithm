@@ -1,6 +1,8 @@
 import java.io.PrintWriter;
 import java.net.InetAddress;
 import java.net.Socket;
+import java.util.ArrayList;
+import java.util.Random;
 
 public class Participant {
 
@@ -8,6 +10,8 @@ public class Participant {
     int listenerPort;
     int participantport;
     int timeout;
+    ArrayList<String> votingOptions;
+    String myvote;
 
     public Participant(int cport, int lport, int pport, int timeout) {
 
@@ -15,6 +19,7 @@ public class Participant {
         this.listenerPort = lport;
         this.participantport = pport;
         this.timeout = timeout;
+        votingOptions = new ArrayList<>();
 
         try {
             // Creates a socket with host ip address and port
@@ -35,5 +40,11 @@ public class Participant {
         } catch (Exception e) {
             System.out.println("error" + e);
         }
+    }
+
+    private String pickMyVote(){
+        Random rand = new Random();
+        int x = rand.nextInt(votingOptions.size());
+        return votingOptions.get(x);
     }
 }
