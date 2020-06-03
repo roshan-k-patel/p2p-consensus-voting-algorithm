@@ -96,18 +96,19 @@ public class Coordinator {
 
     // runs coordinator server connections on their own thread, keep open for any communication rec from corresponding participant
     class CoordinatorServerThread implements Runnable {
-        Socket participant;
+        // SOCKET FROM THE COORDS REFERENCE, IN = COORD SIDE, OUT = PARTICIPANT SIDE
+        Socket socketCoordPart;
         Coordinator coordinator;
 
-        CoordinatorServerThread(Socket p, Coordinator c) {
-            participant = p;
+        CoordinatorServerThread(Socket s, Coordinator c) {
+            socketCoordPart = s;
             coordinator = c;
         }
 
         public void run() {
             try {
-                BufferedReader in = new BufferedReader(new InputStreamReader(participant.getInputStream()));
-                PrintWriter out = new PrintWriter(participant.getOutputStream(), true);
+                BufferedReader in = new BufferedReader(new InputStreamReader(socketCoordPart.getInputStream()));
+                PrintWriter out = new PrintWriter(socketCoordPart.getOutputStream(), true);
                 String line;
                 String sPort = "";
                 int port;
@@ -180,7 +181,4 @@ public class Coordinator {
         }
     }
 
-    public void testMethod() {
-
-    }
 }
