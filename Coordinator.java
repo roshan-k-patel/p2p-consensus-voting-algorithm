@@ -11,6 +11,7 @@ public class Coordinator {
     static int currentParticipants = 0;
     static int expectedParticipants;
     static boolean sentDetails = false;
+    static boolean sentVoteOptions = false;
     ArrayList<String> votingOptions;
     int listenPort;
     int timeout;
@@ -121,39 +122,45 @@ public class Coordinator {
                         coordinator.addParticipant(port);
 
                     }
-                    System.out.println(line + " received");
 
                     //waits for other threads to get their port
                     Thread.sleep(500);
 
+
                     String details = coordinator.getParticipantListString();
                     String detailsSpecific = "";
 
-                    // removes own port from the list of ports and
-                    if (details.contains(sPort)) {
+                    // removes own port from the list of ports and sends details of other participants
+                    if (details.contains(sPort) && sentDetails == false) {
                         detailsSpecific = details.replace(sPort, "");
                         detailsSpecific = detailsSpecific.trim();
                         detailsSpecific = detailsSpecific.replace("  ", " ");
                         detailsSpecific = "DETAILS " + detailsSpecific;
+                        Thread.sleep(500);
+                        // SENDS THE PARTICIPANT DETAILS
+                        out.println(detailsSpecific);
+                        sentDetails = true;
+                        System.out.println("Sent Details: " + detailsSpecific);
                     }
 
                     Thread.sleep(500);
-                    // SENDS THE PARTICIPANT DETAILS
-                    out.println(detailsSpecific);
-                    System.out.println("Sent Details: " + detailsSpecific);
-
-                    Thread.sleep(2500);
 
                     // SENDS THE VOTING OPTIONS
                     String votingOptions = "";
                     for (String x : coordinator.votingOptions) {
                         votingOptions = votingOptions + x + " ";
                     }
-                    votingOptions = "VOTE_OPTIONS " + votingOptions;
 
-                    System.out.println("Sending Vote options: " + votingOptions);
+                    if (sentVoteOptions == false) {
+                        votingOptions = "VOTE_OPTIONS " + votingOptions;
+                        System.out.println("Sending Vote options: " + votingOptions);
+                        out.println(votingOptions);
+                        sentVoteOptions = true;
+                    }
+                    if (line.contains("OUTCOME")) {
+                        System.out.println(line);
+                    }
 
-                    out.println(votingOptions);
 
                 }
 

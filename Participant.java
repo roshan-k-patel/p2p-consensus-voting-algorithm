@@ -25,6 +25,7 @@ public class Participant {
     HashMap<String,String> newVotes;
     boolean roundVotesSent;
     ArrayList<Socket> socketsOtherParticipants;
+    String winningVote;
 
 
     public Participant(int cport, int lport, int pport, int timeout) {
@@ -42,6 +43,7 @@ public class Participant {
         currentRound = 1;
         roundVotesSent = false;
         socketsOtherParticipants = new ArrayList<>();
+        winningVote = null;
 
         try {
             // Creates a socket with host ip address and coordinator port
@@ -171,9 +173,14 @@ public class Participant {
 
                 }
 
+                participant.calculateWinningVote(participant);
+                System.out.println("Winning vote is: " + participant.getOutcomeVote(participant));
+
+                Thread.sleep(100);
+
+                out.println("OUTCOME " + participant.getOutcomeVote(participant) + " " + participant.getOutcomePortsString(participant));
 
 
-                // 10 sockets connect to server wait 500 for connections then send votes
 
                 // participant.close();
             } catch (Exception e) {
@@ -371,7 +378,7 @@ public class Participant {
                 out = new PrintWriter(s.getOutputStream(), true);
                 for (String x : participant.getNewVotes().keySet()) {
                     out.println("VOTE " + x + " " + participant.getNewVotes().get(x));
-                    System.out.println("NEWER VOTE: " + x + " " + participant.getNewVotes().get(x));
+                    System.out.println("New Votes last round " + x + " " + participant.getNewVotes().get(x));
                 }
             }
         } catch (Exception e) {
@@ -398,5 +405,45 @@ public class Participant {
 
     public synchronized void addSocketToSocketsList(Participant participant, Socket socket){
         participant.getSocketsOtherParticipants().add(socket);
+    }
+
+    public synchronized void setWinningVote(Participant participant, String s){
+        participant.winningVote = s;
+    }
+
+    public synchronized String getOutcomeVote(Participant participant){
+        return participant.winningVote;
+    }
+
+    public synchronized void calculateWinningVote(Participant participant){
+        ArrayList<String> votes = new ArrayList<>();
+
+        for(String x : participant.getMainVotes().values()){
+            votes.add(x);
+        }
+
+        Map<String, Integer> voteCountMap = new HashMap<>();
+
+        for (String s : votes) {
+            if (voteCountMap.get(s) != null) {
+                Integer count = voteCountMap.get(s) + 1;
+                voteCountMap.put(s, count);
+            } else {
+                voteCountMap.put(s, 1);
+            }
+        }
+
+        String winningVote = Collections.max(voteCountMap.entrySet(), Map.Entry.comparingByValue()).getKey();
+        setWinningVote(participant,winningVote);
+    }
+
+    public synchronized String getOutcomePortsString(Participant participant){
+        String ports = String.valueOf(participant.getParticipantport());
+
+        for (String s : participant.getOtherParticipants()){
+            ports = ports + " " + s;
+        }
+
+        return ports;
     }
 }
