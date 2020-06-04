@@ -2,12 +2,11 @@ import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.PrintWriter;
+import java.lang.reflect.Array;
 import java.net.InetAddress;
 import java.net.ServerSocket;
 import java.net.Socket;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.Random;
+import java.util.*;
 
 public class Participant {
 
@@ -24,6 +23,9 @@ public class Participant {
     int totalRounds;
     HashMap<String,String> tempVotes;
     HashMap<String,String> mainVotes;
+    HashMap<String,String> newVotes;
+    boolean roundVotesSent;
+
 
     public Participant(int cport, int lport, int pport, int timeout) {
 
@@ -36,7 +38,9 @@ public class Participant {
         hasVoteOptions = false;
         tempVotes = new HashMap<>();
         mainVotes = new HashMap<>();
-        currentRound = 0;
+        newVotes = new HashMap<>();
+        currentRound = 1;
+        roundVotesSent = false;
 
         try {
             // Creates a socket with host ip address and coordinator port
@@ -55,15 +59,6 @@ public class Participant {
 
 
     }
-
-    public synchronized void addOtherParticipant(String participant) {
-        this.otherParticipants.add(participant);
-    }
-
-    public synchronized void addVotingOption(String option) {
-        this.votingOptions.add(option);
-    }
-
 
     class ParticipantVoteInitThread implements Runnable {
         Socket socketPartCord;
@@ -125,7 +120,7 @@ public class Participant {
                 }
                 /*SETS NUMBER OF ROUNDS TO N + 1 ROUNDS AND RANDOMLY GENERATES THIS PARTICIPANT'S VOTE AND
                 THEN SETS IT TO THE OBJECT VARIABLE MYVOTE*/
-                participant.setTotalRounds(otherParticipants.size()+2);
+                participant.setTotalRounds(getOtherParticipantSize()+2);
                 participant.setVote(pickMyVote());
                 Thread.sleep(500);
                 System.out.println("Vote is ready to commence");
@@ -137,11 +132,27 @@ public class Participant {
 
                 Thread.sleep(1000);
 
+                int delay = 0; // delay for 5 sec.
+                int period = 3000; // repeat every sec.
+                Timer timer = new Timer();
+                timer.scheduleAtFixedRate(new TimerTask()
+                {
+                    public void run()
+                    {
+                        // Your code
+                        participant.incrementRound();
+
+                        System.out.println("ROUND IS: " + participant.getCurrentRound());
+
+
+                    }
+                }, delay, period);
+
                 /*CREATES A SOCKET FOR EVERY OTHER PARTICIPANT ON THE NETWORK AND CONNECTS TO THEIR PORT
                  * THEN STARTS A NEW THREAD TO SEND IT'S VOTE TO THE SOCKET CONNECTED*/
                 // TODO CHANGE TO FOR EACH TO MAKE IT FAILURE TOLERANT
-                for (int i = 0; i < participant.otherParticipants.size(); i++){
-                    Socket socket = new Socket(InetAddress.getLocalHost(), Integer.parseInt(participant.otherParticipants.get(i)));
+                for (int i = 0; i < participant.getOtherParticipantSize(); i++){
+                    Socket socket = new Socket(InetAddress.getLocalHost(), Integer.parseInt(participant.getOtherParticipantAtIndex(i)));
                     new Thread(new SendVoteThread(socket,participant)).start();
                 }
 
@@ -168,11 +179,42 @@ public class Participant {
                 BufferedReader in = new BufferedReader(new InputStreamReader(socket.getInputStream()));
                 PrintWriter out = new PrintWriter(socket.getOutputStream(), true);
 
+                //    while (participant.currentRound <= participant.totalRounds){}
+
+
+                if (participant.getCurrentRound() == 1) {
+                    out.println("VOTE " + participant.getParticipantport() + " " + participant.getMyvote());
+                    System.out.println("Sent Vote: " + participant.getParticipantport() + " " + participant.getMyvote());
+                    //  participant.currentRound = participant.currentRound + 1;
+                    Thread.sleep(1000);
+
+
+
+/*                if (participant.currentRound > 1) {
+                    participant.newVotes.putAll(tempVotes);
+                    Thread.sleep(1000);
+                    participant.tempVotes.clear();
+
+                    for (String x : participant.newVotes.keySet()) {
+                        out.println("VOTE " + x + " " + participant.newVotes.get(x));
+                        System.out.println("NEWER VOTE: " + x + " " + participant.newVotes.get(x));
+                    }
+                    // System.out.println("Sent NEW Votes");
+                    participant.currentRound = participant.currentRound + 1;
+                    Thread.sleep(1000);
+
+                }*/
+
+                }
+
+                System.out.println("Main votes for " + participant.getParticipantport() + " are " + participant.getMainVotes());
+                System.out.println("Temp votes for " + participant.getParticipantport() + " are " + participant.getTempVotes());
+
                 Thread.sleep(2000);
-                out.println(participant.myvote);
-                System.out.println("Sent Vote: " + participant.myvote);
+
             } catch (Exception e) {
             }
+
         }
     }
 
@@ -189,7 +231,7 @@ public class Participant {
                 PrintWriter out = new PrintWriter(socket.getOutputStream(), true);*/
 
 
-                ServerSocket socketVoteReceiver = new ServerSocket(participant.participantport);
+                ServerSocket socketVoteReceiver = new ServerSocket(participant.getParticipantport());
 
 
                 while(true){
@@ -221,26 +263,31 @@ public class Participant {
                 BufferedReader in = new BufferedReader(new InputStreamReader(socket.getInputStream()));
                 PrintWriter out = new PrintWriter(socket.getOutputStream(), true);
 
-                System.out.println("LISTENING FOR VOTES");
+                //  System.out.println("LISTENING FOR VOTES");
                 String line;
+                String port = "";
+                String vote = "";
                 while ((line = in.readLine()) != null) {
+                    //   Thread.sleep(500);
                     if (line.contains("VOTE")){
                         String[] parts = line.split(" ");
 
-                        String port = parts[1];
-                        String vote = parts[2];
+                        port = parts[1];
+                        vote = parts[2];
 
-                        System.out.println("PUTTING VOTE " + port + " " + vote);
-                        participant.tempVotes.put(port,vote);
+                        putVoteInTemp(participant,port,vote);
+                        putNewVoteInMain(participant.mainVotes, participant.tempVotes);
+
+                        //  participant.deleteRecordedVotes(participant);
+
+
                     }
-                    System.out.println(line + " received");
+
                 }
             } catch (Exception e) {
             }
         }
     }
-
-
 
     private String pickMyVote() {
         Random rand = new Random();
@@ -254,5 +301,73 @@ public class Participant {
 
     public void setTotalRounds(int totalRounds) {
         this.totalRounds = totalRounds;
+    }
+
+    public synchronized void deleteRecordedVotes(Participant participant){
+        for (String x : participant.tempVotes.keySet()){
+            if (participant.mainVotes.keySet().contains(x)){
+                participant.tempVotes.remove(x);
+            }
+        }
+    }
+
+    public synchronized void putVoteInTemp(Participant participant, String port, String vote){
+        participant.tempVotes.put(port,vote);
+    }
+
+    public synchronized void putNewVoteInMain(HashMap<String,String> mainVotes, HashMap<String,String> tempVotes){
+        mainVotes.putAll(tempVotes);
+    }
+
+    public synchronized int getParticipantport() {
+        return participantport;
+    }
+
+    public synchronized String getMyvote() {
+        return myvote;
+    }
+
+    public synchronized int getCurrentRound() {
+        return currentRound;
+    }
+
+    public synchronized int getTotalRounds() {
+        return totalRounds;
+    }
+
+    public synchronized void incrementRound(){
+        currentRound = currentRound + 1;
+    }
+
+    public synchronized ArrayList<String> getOtherParticipants(){
+        return otherParticipants;
+    }
+
+    public synchronized int getOtherParticipantSize(){
+        return otherParticipants.size();
+    }
+
+    public synchronized String getOtherParticipantAtIndex(int index){
+        return otherParticipants.get(index);
+    }
+
+    public synchronized void addOtherParticipant(String participant) {
+        this.otherParticipants.add(participant);
+    }
+
+    public synchronized void addVotingOption(String option) {
+        this.votingOptions.add(option);
+    }
+
+    public synchronized HashMap<String, String> getTempVotes() {
+        return tempVotes;
+    }
+
+    public synchronized HashMap<String, String> getMainVotes() {
+        return mainVotes;
+    }
+
+    public synchronized HashMap<String, String> getNewVotes() {
+        return newVotes;
     }
 }
