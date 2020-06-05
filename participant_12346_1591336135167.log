@@ -1,0 +1,48 @@
+[P12346] started listening on port 12346
+[P12346] accepted connection from port 4432
+[P12346] accepted connection from port 4432
+[P12346] JOIN sent to Coordinator on port 64001
+[P12346] started listening on port 12346
+[P12346] accepted connection from port 4432
+[P12346] accepted connection from port 4432
+[P12346] JOIN sent to Coordinator on port 64002
+[P12346] started listening on port 12346
+[P12346] accepted connection from port 4432
+[P12346] accepted connection from port 4432
+[P12346] JOIN sent to Coordinator on port 64003
+[P12346] received participant ports: 12346, 12348
+[P12346] received participant ports: 12346, 12347
+[P12346] received participant ports: 12347, 12348
+[P12346] received vote options: A, B, C
+[P12346] received vote options: A, B, C
+[P12346] received vote options: A, B, C
+[P12346] begin round 1
+[P12346] begin round 1
+[P12346] begin round 1
+[P12346] end round 1
+[P12346] end round 1
+[P12346] end round 1
+[P12346] begin round 2
+[P12346] begin round 2
+[P12346] begin round 2
+[P12346] end round 2
+[P12346] end round 2
+[P12346] end round 2
+[P12346] begin round 3
+[P12346] begin round 3
+[P12346] begin round 3
+[P12346] end round 3
+[P12346] end round 3
+[P12346] end round 3
+[P12346] begin round 4
+[P12346] begin round 4
+[P12346] begin round 4
+[P12346] end round 4
+[P12346] end round 4
+[P12346] end round 4
+[P12346] outcome vote decided: C(based on votes of Participants 12347, 12346, 12348)
+[P12346] outcome vote decided: C(based on votes of Participants 12346, 12347, 12348)
+[P12346] outcome vote decided: C(based on votes of Participants 12348, 12346, 12347)
+[P12346] outcome vote sent to Coordinator: C(based on votes of Participants 12346, 12347, 12348)
+[P12346] outcome vote sent to Coordinator: C(based on votes of Participants 12348, 12346, 12347)
+[P12346] outcome vote sent to Coordinator: C(based on votes of Participants 12347, 12346, 12348)

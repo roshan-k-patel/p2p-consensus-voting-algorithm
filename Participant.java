@@ -28,6 +28,7 @@ public class Participant {
     String winningVote;
 
 
+
     public Participant(int cport, int lport, int pport, int timeout) {
 
         this.coordinatorPort = cport;
@@ -45,10 +46,10 @@ public class Participant {
         socketsOtherParticipants = new ArrayList<>();
         winningVote = null;
 
+
         try {
             // Creates a socket with host ip address and coordinator port
             Socket socket = new Socket(InetAddress.getLocalHost(), coordinatorPort);
-
 
             new Thread(new ParticipantVoteInitThread(socket, this)).start();
 
@@ -75,12 +76,16 @@ public class Participant {
 
         public void run() {
             try {
+                ParticipantLogger.getLogger().startedListening();
                 BufferedReader in = new BufferedReader(new InputStreamReader(socketPartCord.getInputStream()));
                 PrintWriter out = new PrintWriter(socketPartCord.getOutputStream(), true);
+                ParticipantLogger.getLogger().connectionAccepted(socketPartCord.getPort());
 
+                ParticipantLogger.getLogger().connectionAccepted(socketPartCord.getPort());
                 // SENDING JOIN REQUEST AND PORT ID TO COORDINATOR
                 // Printer writer which prints a message into the socket output stream
                 out.println("JOIN " + participant.participantport);
+                ParticipantLogger.getLogger().joinSent(socketPartCord.getLocalPort());
 
                 Thread.sleep(2000);
 
@@ -91,11 +96,13 @@ public class Participant {
                     //DETAILS
                     if (line.contains("DETAILS")) {
                         String[] parts = line.split(" ");
-
+                        ArrayList<Integer> otherParticipantInts = new ArrayList<>();
                         for (int i = 1; i < parts.length; i++) {
                             participant.addOtherParticipant(parts[i]);
+                            participant.addOtherParticipantInts(otherParticipantInts,parts[i]);
                         }
                         participant.hasDetails = true;
+                        ParticipantLogger.getLogger().detailsReceived(otherParticipantInts);
                         System.out.println("received details");
                     }
 
@@ -110,6 +117,8 @@ public class Participant {
                         }
 
                         participant.hasVoteOptions = true;
+
+                        ParticipantLogger.getLogger().voteOptionsReceived(participant.getVotingOptions());
                         System.out.println("Received voting options");
 
 
@@ -141,6 +150,8 @@ public class Participant {
                 for (participant.getCurrentRound(); participant.getCurrentRound() <= participant.getTotalRounds(); participant.incrementRound()){
                     Thread.sleep(100);
 
+                    ParticipantLogger.getLogger().beginRound(participant.getCurrentRound());
+
                     if (participant.getCurrentRound() == 1){
                         sendMyVote(participant);
                         Thread.sleep(100);
@@ -166,7 +177,7 @@ public class Participant {
 
                     Thread.sleep(500);
 
-
+                    ParticipantLogger.getLogger().endRound(participant.getCurrentRound());
 
                     System.out.println( "Round " + participant.getCurrentRound() + " Main votes for " + participant.getParticipantport() + " are " + participant.getMainVotes());
                     System.out.println("Round " + participant.getCurrentRound() + " New votes for " + participant.getParticipantport() + " are " + participant.getNewVotes());
@@ -175,11 +186,11 @@ public class Participant {
 
                 participant.calculateWinningVote(participant);
                 System.out.println("Winning vote is: " + participant.getOutcomeVote(participant));
-
+                ParticipantLogger.getLogger().outcomeDecided(participant.getOutcomeVote(participant),participant.getAllParticipantInts());
                 Thread.sleep(100);
 
                 out.println("OUTCOME " + participant.getOutcomeVote(participant) + " " + participant.getOutcomePortsString(participant));
-
+                ParticipantLogger.getLogger().outcomeNotified(participant.getOutcomeVote(participant),participant.getAllParticipantInts());
 
 
                 // participant.close();
@@ -335,6 +346,10 @@ public class Participant {
         this.otherParticipants.add(participant);
     }
 
+    public synchronized void addOtherParticipantInts(ArrayList<Integer> integerArrayList,String participant) {
+        integerArrayList.add(Integer.valueOf(participant));
+    }
+
     public synchronized void addVotingOption(String option) {
         this.votingOptions.add(option);
     }
@@ -445,5 +460,21 @@ public class Participant {
         }
 
         return ports;
+    }
+
+    public synchronized ArrayList<String> getVotingOptions(){
+        return this.votingOptions;
+    }
+
+    public synchronized ArrayList<Integer> getAllParticipantInts(){
+        ArrayList<Integer> allIds = new ArrayList<>();
+        allIds.add(this.getParticipantport());
+
+        for (String x : this.getOtherParticipants()){
+            int y = Integer.parseInt(x);
+            allIds.add(y);
+        }
+
+        return allIds;
     }
 }

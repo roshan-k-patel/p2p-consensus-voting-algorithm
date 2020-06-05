@@ -36,7 +36,13 @@ public class Coordinator {
 
 
         try {
-            CoordinatorLogger.initLogger(7777,8888,60000);
+            CoordinatorLogger.initLogger(7777,coordinatorPort,60000);
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+
+        try {
+            ParticipantLogger.initLogger(7778,participantStartPort,60000);
         } catch (IOException e) {
             e.printStackTrace();
         }
@@ -104,7 +110,7 @@ public class Coordinator {
                 String line;
                 String sPort = "";
                 int port = 0;
-                CoordinatorLogger.getLogger().startedListening(socketCoordPart.getPort());
+                CoordinatorLogger.getLogger().startedListening(socketCoordPart.getLocalPort());
                 Thread.sleep(50);
                 while ((line = in.readLine()) != null) {
                     // if the message is a join message then splits the string and adds the port to the static arraylist
