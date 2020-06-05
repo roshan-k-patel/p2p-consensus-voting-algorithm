@@ -1,6 +1,7 @@
 import java.io.BufferedReader;
 import java.io.InputStreamReader;
 import java.io.PrintWriter;
+import java.net.InetAddress;
 import java.net.ServerSocket;
 import java.net.Socket;
 import java.util.ArrayList;
@@ -10,8 +11,6 @@ public class Coordinator {
 
     static int currentParticipants = 0;
     static int expectedParticipants;
-    static boolean sentDetails = false;
-    static boolean sentVoteOptions = false;
     ArrayList<String> votingOptions;
     int listenPort;
     int timeout;
@@ -43,7 +42,7 @@ public class Coordinator {
 
         try {
             //creates a serversocket for the coordinator
-            ServerSocket ss = new ServerSocket(coordinatorPort);
+            ServerSocket ss = new ServerSocket(coordinatorPort,0, InetAddress.getLocalHost());
             System.out.println("A Coordinator has been established on port: " + coordinatorPort);
 
             //creates the correct number of participants with the necessary information. using the participant start port and incrementing it each creation
@@ -131,7 +130,7 @@ public class Coordinator {
                     String detailsSpecific = "";
 
                     // removes own port from the list of ports and sends details of other participants
-                    if (details.contains(sPort) && sentDetails == false) {
+                    if (details.contains(sPort)) {
                         detailsSpecific = details.replace(sPort, "");
                         detailsSpecific = detailsSpecific.trim();
                         detailsSpecific = detailsSpecific.replace("  ", " ");
@@ -139,8 +138,6 @@ public class Coordinator {
                         Thread.sleep(500);
                         // SENDS THE PARTICIPANT DETAILS
                         out.println(detailsSpecific);
-                        sentDetails = true;
-                        System.out.println("Sent Details: " + detailsSpecific);
                     }
 
                     Thread.sleep(500);
@@ -151,12 +148,9 @@ public class Coordinator {
                         votingOptions = votingOptions + x + " ";
                     }
 
-                    if (sentVoteOptions == false) {
                         votingOptions = "VOTE_OPTIONS " + votingOptions;
-                        System.out.println("Sending Vote options: " + votingOptions);
                         out.println(votingOptions);
-                        sentVoteOptions = true;
-                    }
+
                     if (line.contains("OUTCOME")) {
                         System.out.println(line);
                     }
