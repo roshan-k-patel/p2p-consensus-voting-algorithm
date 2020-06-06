@@ -16,8 +16,9 @@ public class Coordinator {
     int listenPort;
     int timeout;
     int coordinatorPort;
-    int participantStartPort = 12346;
     static ArrayList<Integer> participantPorts = new ArrayList<>();
+    static boolean allConnected = false;
+    static int joinReceived;
 
     private Coordinator(String[] args) throws InsufficientArgsException {
 
@@ -34,18 +35,9 @@ public class Coordinator {
         expectedParticipants = Integer.parseInt(args[2]);
         timeout = Integer.parseInt(args[3]);
 
+        joinReceived = 0;
 
-        try {
-            CoordinatorLogger.initLogger(7777,coordinatorPort,60000);
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
 
-        try {
-            ParticipantLogger.initLogger(7778,participantStartPort,60000);
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
 
         // adds the voting options to an arraylist of Strings
         votingOptions = new ArrayList<>();
@@ -62,20 +54,21 @@ public class Coordinator {
             //creates the correct number of participants with the necessary information. using the participant start port and incrementing it each creation
             while (currentParticipants < expectedParticipants) {
                 // create participant object with parameters here
-                Participant participant = new Participant(coordinatorPort, listenPort, participantStartPort, timeout); // cport lport pport timeout
+              //  Participant participant = new Participant(coordinatorPort, listenPort, participantStartPort, timeout); // cport lport pport timeout
 
                 try {
                     //creates a new socket from the accepted server connection, and then starts a new thread with this socket (participant connects directly with this socket)
                     Socket partSocket = ss.accept();
 
                     //adds the connected participant port to the arraylist of ports
-                    participantStartPort++;
                     currentParticipants++;
                     new Thread(new CoordinatorServerThread(partSocket, this)).start();
                 } catch (Exception e) {
                     System.out.println("error " + e);
                 }
             }
+            //sets all connected to true once current participants = expected participants
+            allConnected = true;
         } catch (Exception e) {
             System.out.println("error " + e);
         }
@@ -102,96 +95,108 @@ public class Coordinator {
             socketCoordPart = s;
             coordinator = c;
         }
-
+        String line;
+        String sPort = "";
+        int port = 0;
+        boolean detailsOptionsSent = false;
         public void run() {
-            try {
-                BufferedReader in = new BufferedReader(new InputStreamReader(socketCoordPart.getInputStream()));
-                PrintWriter out = new PrintWriter(socketCoordPart.getOutputStream(), true);
-                String line;
-                String sPort = "";
-                int port = 0;
-                CoordinatorLogger.getLogger().startedListening(socketCoordPart.getLocalPort());
-                Thread.sleep(50);
-                while ((line = in.readLine()) != null) {
-                    // if the message is a join message then splits the string and adds the port to the static arraylist
-                    if (line.contains("JOIN")) {
-                        String[] parts = line.split(" ");
-                        sPort = parts[1];
-                        port = Integer.parseInt(sPort);
-                        CoordinatorLogger.getLogger().connectionAccepted(port);
-                        Thread.sleep(50);
-                        CoordinatorLogger.getLogger().messageReceived(port,line);
-                        CoordinatorLogger.getLogger().joinReceived(port);
-                        coordinator.addParticipant(port);
+            while(true) {
+                try {
+                    BufferedReader in = new BufferedReader(new InputStreamReader(socketCoordPart.getInputStream()));
+                    PrintWriter out = new PrintWriter(socketCoordPart.getOutputStream(), true);
+                    CoordinatorLogger.getLogger().startedListening(socketCoordPart.getLocalPort());
+                    while ((line = in.readLine()) != null) {
+                        // if the message is a join message then splits the string and adds the port to the static arraylist
+                        if (line.contains("JOIN")) {
+                            String[] parts = line.split(" ");
+                            sPort = parts[1];
+                            port = Integer.parseInt(sPort);
+                            CoordinatorLogger.getLogger().connectionAccepted(port);
+                            Thread.sleep(50);
+                            CoordinatorLogger.getLogger().messageReceived(port, line);
+                            CoordinatorLogger.getLogger().joinReceived(port);
+                            coordinator.addParticipant(port);
 
-                        //waits for other threads to get their port
-                        Thread.sleep(500);
+                            //waits for other threads to get their port
+                            Thread.sleep(250);
+                            coordinator.incrementJoinReceived();
+                        }
 
+                        if (coordinator.isAllConnected() && !detailsOptionsSent) {
+                            Thread.sleep(5000);
+                            String details = coordinator.getParticipantListString();
+                            String detailsSpecific = "";
 
-                        String details = coordinator.getParticipantListString();
-                        String detailsSpecific = "";
+                            if (details.contains(sPort)) {
+                                detailsSpecific = details.replace(sPort, "");
+                                detailsSpecific = detailsSpecific.trim();
+                                detailsSpecific = detailsSpecific.replace("  ", " ");
+                                ArrayList<Integer> otherParts = new ArrayList<Integer>();
+                                String[] otherPartsParts = detailsSpecific.split(" ");
+                                for (int i = 0; i < otherPartsParts.length; i++) {
+                                    otherParts.add(Integer.valueOf(otherPartsParts[i]));
+                                }
 
-                        if (details.contains(sPort)) {
-                            detailsSpecific = details.replace(sPort, "");
-                            detailsSpecific = detailsSpecific.trim();
-                            detailsSpecific = detailsSpecific.replace("  ", " ");
-                            ArrayList<Integer> otherParts = new ArrayList<Integer>();
-                            String[] otherPartsParts = detailsSpecific.split(" ");
-                            for (int i = 0; i < otherPartsParts.length; i++) {
-                                otherParts.add(Integer.valueOf(otherPartsParts[i]));
+                                detailsSpecific = "DETAILS " + detailsSpecific;
+                                Thread.sleep(100);
+                                // SENDS THE PARTICIPANT DETAILS
+                                out.println(detailsSpecific);
+                                CoordinatorLogger.getLogger().messageSent(port, detailsSpecific);
+                                CoordinatorLogger.getLogger().detailsSent(port, otherParts);
                             }
 
-                            detailsSpecific = "DETAILS " + detailsSpecific;
-                            Thread.sleep(500);
-                            // SENDS THE PARTICIPANT DETAILS
-                            out.println(detailsSpecific);
-                            CoordinatorLogger.getLogger().messageSent(port,detailsSpecific);
-                            CoordinatorLogger.getLogger().detailsSent(port, otherParts);
+                            Thread.sleep(100);
+
+                            // SENDS THE VOTING OPTIONS
+                            String votingOptions = "";
+                            for (String x : coordinator.votingOptions) {
+                                votingOptions = votingOptions + x + " ";
+                            }
+
+                            votingOptions = "VOTE_OPTIONS " + votingOptions;
+                            out.println(votingOptions);
+                            CoordinatorLogger.getLogger().messageSent(port, votingOptions);
+                            CoordinatorLogger.getLogger().voteOptionsSent(port, coordinator.getVotingOptions());
+                            detailsOptionsSent = true;
+
                         }
 
-                        Thread.sleep(500);
+                        // removes own port from the list of ports and sends details of other participants
 
-                        // SENDS THE VOTING OPTIONS
-                        String votingOptions = "";
-                        for (String x : coordinator.votingOptions) {
-                            votingOptions = votingOptions + x + " ";
+
+                        if (line.contains("OUTCOME")) {
+                            System.out.println(line);
+                            String[] parts = line.split(" ");
+                            String vote = parts[1];
+                            CoordinatorLogger.getLogger().messageReceived(port, line);
+                            CoordinatorLogger.getLogger().outcomeReceived(port, vote);
                         }
 
-                        votingOptions = "VOTE_OPTIONS " + votingOptions;
-                        out.println(votingOptions);
-                        CoordinatorLogger.getLogger().messageSent(port,votingOptions);
-                        CoordinatorLogger.getLogger().voteOptionsSent(port,coordinator.getVotingOptions());
 
                     }
 
-
-
-                    // removes own port from the list of ports and sends details of other participants
-
-
-                    if (line.contains("OUTCOME")) {
-                        System.out.println(line);
-                        String[] parts = line.split(" ");
-                        String vote = parts[1];
-                        CoordinatorLogger.getLogger().messageReceived(port,line);
-                        CoordinatorLogger.getLogger().outcomeReceived(port,vote);
-                    }
-
-
+                    // participant.close();
+                } catch (Exception e) {
+                    CoordinatorLogger.getLogger().participantCrashed(port);
+                    System.out.println("coord detected crash/ end of vote, port: " + port);
+                    break;
                 }
 
-                // participant.close();
-            } catch (Exception e) {
-                System.out.println("error" + e);
             }
+
+
+
         }
     }
 
     public static void main(String[] args) {
         try {
+            CoordinatorLogger.initLogger(7777, Integer.parseInt(args[0]),60000);
             Coordinator coordinator = new Coordinator(args);
             //Waits for all participants to connect
         } catch (InsufficientArgsException e) {
+            e.printStackTrace();
+        } catch (IOException e) {
             e.printStackTrace();
         }
     }
@@ -225,6 +230,16 @@ public class Coordinator {
         return this.votingOptions;
     }
 
+    public synchronized boolean isAllConnected(){
+        return allConnected;
+    }
 
+    public synchronized void incrementJoinReceived(){
+        joinReceived = joinReceived + 1;
+    }
+
+    public synchronized int getJoinReceived() {
+        return joinReceived;
+    }
 
 }

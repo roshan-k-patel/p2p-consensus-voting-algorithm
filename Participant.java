@@ -28,13 +28,11 @@ public class Participant {
     String winningVote;
 
 
-
-    public Participant(int cport, int lport, int pport, int timeout) {
-
-        this.coordinatorPort = cport;
-        this.listenerPort = lport;
-        this.participantport = pport;
-        this.timeout = timeout;
+    public Participant(String[] args) {
+        this.coordinatorPort = Integer.parseInt(args[0]);
+        this.listenerPort = Integer.parseInt(args[1]);
+        this.participantport = Integer.parseInt(args[2]);
+        this.timeout = Integer.parseInt(args[3]);
         votingOptions = new ArrayList<>();
         hasDetails = false;
         hasVoteOptions = false;
@@ -46,21 +44,29 @@ public class Participant {
         socketsOtherParticipants = new ArrayList<>();
         winningVote = null;
 
+        while (true) {
+            try {
+                // Creates a socket with host ip address and coordinator port
+                Socket socket = new Socket(InetAddress.getLocalHost(), coordinatorPort);
+                new Thread(new ParticipantVoteInitThread(socket, this)).start();
+                otherParticipants = new ArrayList<>();
+                break;
 
+            } catch (Exception e) {
+                System.out.println("Waiting for Coordinator on port: " + coordinatorPort);
+            }
+        }
+    }
+
+    public static void main(String[] args) {
         try {
-            // Creates a socket with host ip address and coordinator port
-            Socket socket = new Socket(InetAddress.getLocalHost(), coordinatorPort);
-
-            new Thread(new ParticipantVoteInitThread(socket, this)).start();
-
-
-            otherParticipants = new ArrayList<>();
-
-
-        } catch (Exception e) {
-            System.out.println("error" + e);
+            ParticipantLogger.initLogger(Integer.parseInt(args[1]), Integer.parseInt(args[2]),60000);
+            Participant participant = new Participant(args);
+        } catch (IOException e) {
+            e.printStackTrace();
         }
 
+            //Waits for all participants to connect
 
     }
 
@@ -76,25 +82,27 @@ public class Participant {
 
         public void run() {
             try {
+            //    Thread.sleep(100);
                 ParticipantLogger.getLogger().startedListening();
                 BufferedReader in = new BufferedReader(new InputStreamReader(socketPartCord.getInputStream()));
                 PrintWriter out = new PrintWriter(socketPartCord.getOutputStream(), true);
-                ParticipantLogger.getLogger().connectionAccepted(socketPartCord.getPort());
-
-                ParticipantLogger.getLogger().connectionAccepted(socketPartCord.getPort());
+                ParticipantLogger.getLogger().connectionEstablished(socketPartCord.getPort());
                 // SENDING JOIN REQUEST AND PORT ID TO COORDINATOR
                 // Printer writer which prints a message into the socket output stream
                 out.println("JOIN " + participant.participantport);
-                ParticipantLogger.getLogger().joinSent(socketPartCord.getLocalPort());
+                ParticipantLogger.getLogger().joinSent(socketPartCord.getPort());
 
-                Thread.sleep(2000);
+                Thread.sleep(1000);
+
 
                 // ACCEPTING OTHER PARTICIPANTS (DETAILS) AND VOTE OPTIONS
                 String line;
                 while ((line = in.readLine()) != null) {
 
+
                     //DETAILS
                     if (line.contains("DETAILS")) {
+                        ParticipantLogger.getLogger().messageReceived(socketPartCord.getPort(),line);
                         String[] parts = line.split(" ");
                         ArrayList<Integer> otherParticipantInts = new ArrayList<>();
                         for (int i = 1; i < parts.length; i++) {
@@ -104,13 +112,13 @@ public class Participant {
                         participant.hasDetails = true;
                         ParticipantLogger.getLogger().detailsReceived(otherParticipantInts);
                         System.out.println("received details");
+
                     }
 
                     //VOTE_OPTIONS
                     if (line.contains("VOTE_OPTIONS")) {
                         String[] parts = line.split(" ");
-
-                        Thread.sleep(200);
+                        ParticipantLogger.getLogger().messageReceived(socketPartCord.getPort(),line);
 
                         for (int i = 1; i < parts.length; i++) {
                             participant.addVotingOption(parts[i]);
@@ -125,25 +133,26 @@ public class Participant {
 
                     }
                     if (participant.hasVoteOptions && participant.hasDetails) {
+
                         break;
                     }
 
-
                 }
+
                 /*SETS NUMBER OF ROUNDS TO N + 1 ROUNDS AND RANDOMLY GENERATES THIS PARTICIPANT'S VOTE AND
                 THEN SETS IT TO THE OBJECT VARIABLE MYVOTE. ADDS THIS VOTE TO MAIN LIST*/
+                Thread.sleep(1000);
                 participant.setTotalRounds(getOtherParticipantSize()+2);
                 participant.setVote(pickMyVote());
                 participant.recordMyVote(participant.getMainVotes(),participant.getParticipantport(),participant.myvote);
-                Thread.sleep(500);
-                System.out.println("Vote is ready to commence");
+                System.out.println("Vote is ready to commence, please wait, waiting time is proportional to no of participants");
 
              /*   CREATES A NEW THREAD THAT CREATES A SERVER SOCKET ON THIS PARTICIPANT'S PORT AND LISTENS
                 FOR INCOMING CONNECTION REQUESTS FROM OTHER PARTICIPANT SOCKETS
                 WHEN IT GETS A SOCKET CONNECTION IT MAKES A NEW THREAD AND LISTENS FOR INCOMING VOTES ON IT*/
                 new Thread (new ListenVoterConnectionThread(participant)).start();
 
-                Thread.sleep(1000);
+                Thread.sleep(500*participant.getOtherParticipantSize());
 
                 //ROUNDS OF VOTING
 
@@ -156,7 +165,7 @@ public class Participant {
                         sendMyVote(participant);
                         Thread.sleep(100);
                         participant.putNewVotesInNewVoteMap(participant);
-                        Thread.sleep(500);
+                        Thread.sleep(100);
                         participant.clearMap(participant.getTempVotes());
                         Thread.sleep(100);
                         participant.putNewInMain(participant);
@@ -164,18 +173,24 @@ public class Participant {
                     }
 
                     if (participant.getCurrentRound() > 1){
+                        //TESTING FAILURE
+                        /*Random random = new Random();
+                        int fail = random.nextInt(3);
+                        if (fail == 1){
+                            System.exit(0);
+                        }*/
                         Thread.sleep(100);
                         participant.sendPreviousRoundNewVotes(participant);
                         participant.clearMap(participant.newVotes);
                         Thread.sleep(100);
                         participant.putNewVotesInNewVoteMap(participant);
-                        Thread.sleep(500);
+                        Thread.sleep(100);
                         participant.clearMap(participant.getTempVotes());
                         Thread.sleep(100);
                         participant.putNewInMain(participant);
                     }
 
-                    Thread.sleep(500);
+                 //   Thread.sleep(500);
 
                     ParticipantLogger.getLogger().endRound(participant.getCurrentRound());
 
@@ -188,14 +203,16 @@ public class Participant {
                 System.out.println("Winning vote is: " + participant.getOutcomeVote(participant));
                 ParticipantLogger.getLogger().outcomeDecided(participant.getOutcomeVote(participant),participant.getAllParticipantInts());
                 Thread.sleep(100);
-
-                out.println("OUTCOME " + participant.getOutcomeVote(participant) + " " + participant.getOutcomePortsString(participant));
+                String outcomeMessage = "OUTCOME " + participant.getOutcomeVote(participant) + " " + participant.getOutcomePortsString(participant);
+                out.println(outcomeMessage);
+                ParticipantLogger.getLogger().messageSent(socketPartCord.getPort(),outcomeMessage);
                 ParticipantLogger.getLogger().outcomeNotified(participant.getOutcomeVote(participant),participant.getAllParticipantInts());
-
+                Thread.sleep(500*participant.getOtherParticipantSize());
+                System.exit(1);
 
                 // participant.close();
             } catch (Exception e) {
-                System.out.println("error" + e);
+              //  System.out.println("error" + e);
             }
         }
     }
@@ -216,10 +233,10 @@ public class Participant {
 
                 ServerSocket socketVoteReceiver = new ServerSocket(participant.getParticipantport());
 
-
                 while(true){
                     try {
                         Socket socketParticipantConnection = socketVoteReceiver.accept();
+                        ParticipantLogger.getLogger().connectionAccepted(socketParticipantConnection.getPort());
                         new Thread(new ListenForVotes(socketParticipantConnection,participant)).start();
 
                     } catch (IOException e) {
@@ -253,6 +270,7 @@ public class Participant {
                 while ((line = in.readLine()) != null) {
                     //   Thread.sleep(500);
                     if (line.contains("VOTE")){
+                        ParticipantLogger.getLogger().messageReceived(socket.getPort(),line);
                         String[] parts = line.split(" ");
 
                         port = parts[1];
@@ -372,32 +390,38 @@ public class Participant {
             PrintWriter out = null;
             try {
                 socket = new Socket(InetAddress.getLocalHost(), Integer.parseInt(port));
+                ParticipantLogger.getLogger().connectionEstablished(socket.getPort());
                 out = new PrintWriter(socket.getOutputStream(), true);
                 addSocketToSocketsList(participant, socket);
-                out.println("VOTE " + participant.getParticipantport() + " " + participant.getMyvote());
+                String message = "VOTE " + participant.getParticipantport() + " " + participant.getMyvote();
+                out.println(message);
+                ParticipantLogger.getLogger().messageSent(socket.getPort(),message);
             } catch (IOException e) {
                 e.printStackTrace();
             }
 
             System.out.println("Sent Vote: " + participant.getParticipantport() + " " + participant.getMyvote());
-            //  new Thread(new SendVoteThread(socket,participant)).start();
         }
     }
 
     public synchronized void sendPreviousRoundNewVotes(Participant participant){
+        Socket socket = null;
+
         try {
 
             for (Socket s : participant.getSocketsOtherParticipants()) {
                 PrintWriter out = null;
+                socket = s;
 
                 out = new PrintWriter(s.getOutputStream(), true);
                 for (String x : participant.getNewVotes().keySet()) {
-                    out.println("VOTE " + x + " " + participant.getNewVotes().get(x));
+                    String message = "VOTE " + x + " " + participant.getNewVotes().get(x);
+                    out.println(message);
+                    ParticipantLogger.getLogger().messageSent(s.getPort(),message);
                     System.out.println("New Votes last round " + x + " " + participant.getNewVotes().get(x));
                 }
             }
         } catch (Exception e) {
-            System.out.println("error " + e);
         }
     }
 
