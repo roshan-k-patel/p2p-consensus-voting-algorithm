@@ -19,6 +19,7 @@ public class UDPLoggerServer {
 
             System.out.println("listening on port " + listenPort);
 
+            String filename = "logger_server_" + System.currentTimeMillis() + ".log";
 
             while (true){
                 byte[] buf = new byte[256];
@@ -26,7 +27,7 @@ public class UDPLoggerServer {
                 socket.receive(packet);
               //  System.out.println(("" + socket.getLocalPort() + " " + System.currentTimeMillis() + " " + (new String(packet.getData())).trim()));
                 String text = (new String(packet.getData())).trim();
-                saveToFile("logfile.txt",text,true);
+                saveToFile(filename,text,true);
                 confirmation(packet);
                 Thread.sleep(1);
             }

@@ -118,12 +118,12 @@ public class Coordinator {
                             coordinator.addParticipant(port);
 
                             //waits for other threads to get their port
-                            Thread.sleep(350);
+                            Thread.sleep(300);
                             coordinator.incrementJoinReceived();
                         }
 
                         if (coordinator.isAllConnected() && !detailsOptionsSent) {
-                            Thread.sleep(1000);
+                            Thread.sleep(2000);
                             String details = coordinator.getParticipantListString();
                             String detailsSpecific = "";
 
