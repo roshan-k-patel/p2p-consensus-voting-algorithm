@@ -325,8 +325,10 @@ public class Participant {
             } catch (IOException e) {
                 e.printStackTrace();
             }
-            ParticipantLogger.getLogger().votesSent(socket.getPort(),sentVotes);
-            System.out.println("Sent Vote: " + participant.getParticipantport() + " " + participant.getMyvote());
+            if (!sentVotes.isEmpty()) {
+                ParticipantLogger.getLogger().votesSent(socket.getPort(), sentVotes);
+                System.out.println("Sent Vote: " + participant.getParticipantport() + " " + participant.getMyvote());
+            }
         }
     }
 
@@ -348,7 +350,9 @@ public class Participant {
                     sentVotes.add(vote);
                 }
 
-                ParticipantLogger.getLogger().votesSent(socket.getPort(),sentVotes);
+                if (!sentVotes.isEmpty()) {
+                    ParticipantLogger.getLogger().votesSent(socket.getPort(), sentVotes);
+                }
 
             } catch(Exception e){
                 ParticipantLogger.getLogger().participantCrashed(socket.getPort());
