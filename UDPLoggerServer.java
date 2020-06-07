@@ -16,11 +16,12 @@ public class UDPLoggerServer {
     public UDPLoggerServer(int listenPort){
         try{
             socket = new DatagramSocket(listenPort);
-            byte[] buf = new byte[256];
+
             System.out.println("listening on port " + listenPort);
 
 
             while (true){
+                byte[] buf = new byte[256];
                 DatagramPacket packet = new DatagramPacket(buf, buf.length);
                 socket.receive(packet);
               //  System.out.println(("" + socket.getLocalPort() + " " + System.currentTimeMillis() + " " + (new String(packet.getData())).trim()));
@@ -37,7 +38,8 @@ public class UDPLoggerServer {
     }
 
     public void confirmation(DatagramPacket packet){
-        byte[] buf = new byte[256];
+        String ack = "ACK";
+        byte[] buf = ack.getBytes();
         DatagramPacket responsePacket = new DatagramPacket(buf,buf.length, packet.getAddress(), packet.getPort());
         try {
             socket.send(responsePacket);
