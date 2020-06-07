@@ -177,7 +177,7 @@ public class Participant {
                     if (participant.getCurrentRound() > 1){
                         //TESTING FAILURE
                         /*Random random = new Random();
-                        int fail = random.nextInt(10);
+                        int fail = random.nextInt(4);
                         if (fail == 1){
                             System.exit(0);
                         }*/
@@ -302,6 +302,7 @@ public class Participant {
 
                 }
             } catch (Exception e) {
+                ParticipantLogger.getLogger().participantCrashed(socket.getPort());
             }
         }
     }
@@ -355,7 +356,6 @@ public class Participant {
                 }
 
             } catch(Exception e){
-                ParticipantLogger.getLogger().participantCrashed(socket.getPort());
             }
         }
     }

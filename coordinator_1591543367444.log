@@ -13,21 +13,19 @@
 [C] message sent to 12346: "DETAILS 12347 12348"
 [C] message sent to 12347: "DETAILS 12346 12348"
 [C] message sent to 12348: "DETAILS 12346 12347"
-[C] details sent to 12347: 12346, 12348
-[C] details sent to 12346: 12347, 12348
 [C] details sent to 12348: 12346, 12347
+[C] details sent to 12346: 12347, 12348
+[C] details sent to 12347: 12346, 12348
+[C] message sent to 12348: "VOTE_OPTIONS A B C "
 [C] message sent to 12346: "VOTE_OPTIONS A B C "
 [C] message sent to 12347: "VOTE_OPTIONS A B C "
-[C] message sent to 12348: "VOTE_OPTIONS A B C "
-[C] vote options sent to 12347: A, B, C
 [C] vote options sent to 12346: A, B, C
 [C] vote options sent to 12348: A, B, C
-[C] message received from 12346: "OUTCOME B 12346 12347 12348"
-[C] message received from 12348: "OUTCOME B 12348 12346 12347"
-[C] message received from 12347: "OUTCOME B 12347 12346 12348"
-[C] outcome B received from 12346
-[C] outcome B received from 12347
-[C] outcome B received from 12348
-[C] participant crashed: 12347
+[C] vote options sent to 12347: A, B, C
 [C] participant crashed: 12348
+[C] message received from 12347: "OUTCOME A 12347 12346 12348"
+[C] outcome A received from 12347
+[C] message received from 12346: "OUTCOME A 12346 12347 12348"
+[C] outcome A received from 12346
 [C] participant crashed: 12346
+[C] participant crashed: 12347
