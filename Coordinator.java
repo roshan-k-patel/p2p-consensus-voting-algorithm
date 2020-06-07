@@ -191,7 +191,7 @@ public class Coordinator {
 
     public static void main(String[] args) {
         try {
-            CoordinatorLogger.initLogger(7777, Integer.parseInt(args[0]),60000);
+            CoordinatorLogger.initLogger(Integer.parseInt(args[1]), Integer.parseInt(args[0]),60000);
             Coordinator coordinator = new Coordinator(args);
             //Waits for all participants to connect
         } catch (InsufficientArgsException e) {
