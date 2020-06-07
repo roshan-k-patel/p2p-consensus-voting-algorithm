@@ -54,7 +54,7 @@ public class Coordinator {
             //creates the correct number of participants with the necessary information. using the participant start port and incrementing it each creation
             while (currentParticipants < expectedParticipants) {
                 // create participant object with parameters here
-              //  Participant participant = new Participant(coordinatorPort, listenPort, participantStartPort, timeout); // cport lport pport timeout
+                //  Participant participant = new Participant(coordinatorPort, listenPort, participantStartPort, timeout); // cport lport pport timeout
 
                 try {
                     //creates a new socket from the accepted server connection, and then starts a new thread with this socket (participant connects directly with this socket)
@@ -118,12 +118,12 @@ public class Coordinator {
                             coordinator.addParticipant(port);
 
                             //waits for other threads to get their port
-                            Thread.sleep(250);
+                            Thread.sleep(350);
                             coordinator.incrementJoinReceived();
                         }
 
                         if (coordinator.isAllConnected() && !detailsOptionsSent) {
-                            Thread.sleep(5000);
+                            Thread.sleep(1000);
                             String details = coordinator.getParticipantListString();
                             String detailsSpecific = "";
 

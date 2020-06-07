@@ -68,7 +68,7 @@ public class Participant {
             e.printStackTrace();
         }
 
-            //Waits for all participants to connect
+        //Waits for all participants to connect
 
     }
 
@@ -84,7 +84,7 @@ public class Participant {
 
         public void run() {
             try {
-            //    Thread.sleep(100);
+                //    Thread.sleep(100);
                 ParticipantLogger.getLogger().startedListening();
                 BufferedReader in = new BufferedReader(new InputStreamReader(socketPartCord.getInputStream()));
                 PrintWriter out = new PrintWriter(socketPartCord.getOutputStream(), true);
@@ -94,7 +94,7 @@ public class Participant {
                 out.println("JOIN " + participant.participantport);
                 ParticipantLogger.getLogger().joinSent(socketPartCord.getPort());
 
-                Thread.sleep(1000);
+                Thread.sleep(600);
 
 
                 // ACCEPTING OTHER PARTICIPANTS (DETAILS) AND VOTE OPTIONS
@@ -143,7 +143,7 @@ public class Participant {
 
                 /*SETS NUMBER OF ROUNDS TO N + 1 ROUNDS AND RANDOMLY GENERATES THIS PARTICIPANT'S VOTE AND
                 THEN SETS IT TO THE OBJECT VARIABLE MYVOTE. ADDS THIS VOTE TO MAIN LIST*/
-                Thread.sleep(1000);
+                Thread.sleep(600);
                 participant.setTotalRounds(getOtherParticipantSize()+2);
                 participant.setVote(pickMyVote());
                 participant.recordMyVote(participant.getMainVotes(),participant.getParticipantport(),participant.myvote);
@@ -154,24 +154,24 @@ public class Participant {
                 WHEN IT GETS A SOCKET CONNECTION IT MAKES A NEW THREAD AND LISTENS FOR INCOMING VOTES ON IT*/
                 new Thread (new ListenVoterConnectionThread(participant)).start();
 
-                Thread.sleep(500*participant.getOtherParticipantSize());
+                Thread.sleep(1000);
 
                 //ROUNDS OF VOTING
 
                 for (participant.getCurrentRound(); participant.getCurrentRound() <= participant.getTotalRounds(); participant.incrementRound()){
-                    Thread.sleep(100);
+                    Thread.sleep(50);
 
                     ParticipantLogger.getLogger().beginRound(participant.getCurrentRound());
 
                     if (participant.getCurrentRound() == 1){
                         sendMyVote(participant);
-                        Thread.sleep(100);
+                        Thread.sleep(50);
                         participant.putNewVotesInNewVoteMap(participant);
-                        Thread.sleep(100);
+                        Thread.sleep(50);
                         participant.clearMap(participant.getTempVotes());
-                        Thread.sleep(100);
+                        Thread.sleep(50);
                         participant.putNewInMain(participant);
-                        Thread.sleep(100);
+                        Thread.sleep(50);
                     }
 
                     if (participant.getCurrentRound() > 1){
@@ -181,14 +181,14 @@ public class Participant {
                         if (fail == 1){
                             System.exit(0);
                         }*/
-                        Thread.sleep(100);
+                        Thread.sleep(50);
                         participant.sendPreviousRoundNewVotes(participant);
                         participant.clearMap(participant.newVotes);
-                        Thread.sleep(100);
+                        Thread.sleep(50);
                         participant.putNewVotesInNewVoteMap(participant);
-                        Thread.sleep(100);
+                        Thread.sleep(50);
                         participant.clearMap(participant.getTempVotes());
-                        Thread.sleep(100);
+                        Thread.sleep(50);
                         participant.putNewInMain(participant);
                     }
 
@@ -221,7 +221,7 @@ public class Participant {
 
                 // participant.close();
             } catch (Exception e) {
-              //  System.out.println("error" + e);
+                //  System.out.println("error" + e);
             }
         }
     }
@@ -336,7 +336,7 @@ public class Participant {
     public synchronized void sendPreviousRoundNewVotes(Participant participant){
         Socket socket = null;
         for (Socket s : participant.getSocketsOtherParticipants()) {
-        try {
+            try {
                 PrintWriter out = null;
                 socket = s;
                 ArrayList<Vote> sentVotes = new ArrayList<>();

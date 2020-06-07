@@ -73,7 +73,6 @@ public class UDPLoggerClient {
 					ex.printStackTrace();
 				}
 
-
 			} catch (InterruptedException e) {
 				e.printStackTrace();
 			}
