@@ -26,6 +26,7 @@ public class Participant {
     boolean roundVotesSent;
     ArrayList<Socket> socketsOtherParticipants;
     String winningVote;
+    HashMap<String,ArrayList<Vote>> votesReceived;
 
 
     public Participant(String[] args) {
@@ -43,6 +44,7 @@ public class Participant {
         roundVotesSent = false;
         socketsOtherParticipants = new ArrayList<>();
         winningVote = null;
+        votesReceived = new HashMap<>();
 
         while (true) {
             try {
@@ -175,7 +177,7 @@ public class Participant {
                     if (participant.getCurrentRound() > 1){
                         //TESTING FAILURE
                         /*Random random = new Random();
-                        int fail = random.nextInt(3);
+                        int fail = random.nextInt(10);
                         if (fail == 1){
                             System.exit(0);
                         }*/
@@ -190,7 +192,14 @@ public class Participant {
                         participant.putNewInMain(participant);
                     }
 
-                 //   Thread.sleep(500);
+                    //calls the votes received method for all the votes received
+                    for (String x : participant.getVotesReceived().keySet()){
+                        int portReceievedFrom = Integer.parseInt(x);
+                        ParticipantLogger.getLogger().votesReceived(portReceievedFrom,participant.getVotesReceived().get(x));
+                    }
+                    participant.getVotesReceived().clear();
+
+                    Thread.sleep(50);
 
                     ParticipantLogger.getLogger().endRound(participant.getCurrentRound());
 
@@ -277,6 +286,16 @@ public class Participant {
                         vote = parts[2];
 
                         putVoteInTemp(participant,port,vote);
+                        Vote voteObject = new Vote(Integer.parseInt(port),vote);
+                        String socketPort = String.valueOf(socket.getPort());
+
+                        // checks if the receivedVotes hashmap doesnt have the port makes it and adds the vote
+                        // else it just adds the vote
+                        if (!participant.getVotesReceived().keySet().contains(socketPort)) {
+                            ArrayList<Vote> receivedVotes = new ArrayList<>();
+                            participant.getVotesReceived().put(socketPort, receivedVotes);
+                        }
+                        participant.getVotesReceived().get(socketPort).add(voteObject);
 
 
                     }
@@ -285,6 +304,61 @@ public class Participant {
             } catch (Exception e) {
             }
         }
+    }
+
+
+    public synchronized void sendMyVote(Participant participant){
+        for (String port : participant.getOtherParticipants()) {
+            ArrayList<Vote> sentVotes = new ArrayList<>();
+            Socket socket = null;
+            PrintWriter out = null;
+            try {
+                socket = new Socket(InetAddress.getLocalHost(), Integer.parseInt(port));
+                ParticipantLogger.getLogger().connectionEstablished(socket.getPort());
+                out = new PrintWriter(socket.getOutputStream(), true);
+                addSocketToSocketsList(participant, socket);
+                String message = "VOTE " + participant.getParticipantport() + " " + participant.getMyvote();
+                Vote vote = new Vote(participant.getParticipantport(),participant.getMyvote());
+                sentVotes.add(vote);
+                out.println(message);
+                ParticipantLogger.getLogger().messageSent(socket.getPort(),message);
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+            ParticipantLogger.getLogger().votesSent(socket.getPort(),sentVotes);
+            System.out.println("Sent Vote: " + participant.getParticipantport() + " " + participant.getMyvote());
+        }
+    }
+
+    public synchronized void sendPreviousRoundNewVotes(Participant participant){
+        Socket socket = null;
+        for (Socket s : participant.getSocketsOtherParticipants()) {
+        try {
+                PrintWriter out = null;
+                socket = s;
+                ArrayList<Vote> sentVotes = new ArrayList<>();
+                out = new PrintWriter(s.getOutputStream(), true);
+
+                for (String x : participant.getNewVotes().keySet()) {
+                    String message = "VOTE " + x + " " + participant.getNewVotes().get(x);
+                    out.println(message);
+                    ParticipantLogger.getLogger().messageSent(s.getPort(), message);
+                    System.out.println("New Votes last round " + x + " " + participant.getNewVotes().get(x));
+                    Vote vote = new Vote(Integer.parseInt(x),participant.getNewVotes().get(x));
+                    sentVotes.add(vote);
+                }
+
+                ParticipantLogger.getLogger().votesSent(socket.getPort(),sentVotes);
+
+            } catch(Exception e){
+                ParticipantLogger.getLogger().participantCrashed(socket.getPort());
+            }
+        }
+    }
+
+    public synchronized void recordMyVote(HashMap<String,String> hashMap, int port, String vote){
+        String portString = String.valueOf(port);
+        hashMap.put(portString,vote);
     }
 
     private String pickMyVote() {
@@ -325,8 +399,6 @@ public class Participant {
     public synchronized void putNewInMain(Participant participant){
         participant.getMainVotes().putAll(participant.getNewVotes());
     }
-
-
 
     public synchronized int getParticipantport() {
         return participantport;
@@ -382,52 +454,6 @@ public class Participant {
 
     public synchronized HashMap<String, String> getNewVotes() {
         return newVotes;
-    }
-
-    public synchronized void sendMyVote(Participant participant){
-        for (String port : participant.getOtherParticipants()) {
-            Socket socket = null;
-            PrintWriter out = null;
-            try {
-                socket = new Socket(InetAddress.getLocalHost(), Integer.parseInt(port));
-                ParticipantLogger.getLogger().connectionEstablished(socket.getPort());
-                out = new PrintWriter(socket.getOutputStream(), true);
-                addSocketToSocketsList(participant, socket);
-                String message = "VOTE " + participant.getParticipantport() + " " + participant.getMyvote();
-                out.println(message);
-                ParticipantLogger.getLogger().messageSent(socket.getPort(),message);
-            } catch (IOException e) {
-                e.printStackTrace();
-            }
-
-            System.out.println("Sent Vote: " + participant.getParticipantport() + " " + participant.getMyvote());
-        }
-    }
-
-    public synchronized void sendPreviousRoundNewVotes(Participant participant){
-        Socket socket = null;
-
-        try {
-
-            for (Socket s : participant.getSocketsOtherParticipants()) {
-                PrintWriter out = null;
-                socket = s;
-
-                out = new PrintWriter(s.getOutputStream(), true);
-                for (String x : participant.getNewVotes().keySet()) {
-                    String message = "VOTE " + x + " " + participant.getNewVotes().get(x);
-                    out.println(message);
-                    ParticipantLogger.getLogger().messageSent(s.getPort(),message);
-                    System.out.println("New Votes last round " + x + " " + participant.getNewVotes().get(x));
-                }
-            }
-        } catch (Exception e) {
-        }
-    }
-
-    public synchronized void recordMyVote(HashMap<String,String> hashMap, int port, String vote){
-        String portString = String.valueOf(port);
-        hashMap.put(portString,vote);
     }
 
     public synchronized void putTempInNew(Participant participant){
@@ -501,4 +527,10 @@ public class Participant {
 
         return allIds;
     }
+
+    public synchronized HashMap<String, ArrayList<Vote>> getVotesReceived(){
+        return this.votesReceived;
+    }
+
+
 }
