@@ -1,3 +1,4 @@
 # consensus-voting-algorithm
 
-Compile Coordinator and Participants before running scripts or running in terminal with arguments
+Execute UDPServerListener before starting vote
+Compile Coordinator and Participants before running scripts / running in terminal with arguments
